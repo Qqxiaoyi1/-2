@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>主控专属 - 全站频道发布中心</title>
+  <style>
+    body {margin:0;padding:20px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);min-height:100vh;font-family:Arial,sans-serif;color:#fff;}
+    .container {max-width:900px;margin:30px auto;padding:25px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);}
+    h2 {border-bottom:2px solid #4CAF50;padding-bottom:10px;margin-bottom:20px;text-align:center;}
+    .publish-area {padding:20px;background:rgba(0,0,0,0.2);border-radius:10px;margin-bottom:25px;}
+    input, textarea {width:100%;padding:12px;margin:8px 0;border:none;border-radius:6px;background:rgba(255,255,255,0.2);color:#fff;box-sizing:border-box;}
+    textarea {min-height:100px;resize:none;}
+    ::placeholder {color:rgba(255,255,255,0.7);}
+    .btn {padding:12px 24px;border:none;border-radius:6px;color:#fff;cursor:pointer;margin:8px 5px;}
+    .btn-success {background:#4CAF50;}
+    .btn-danger {background:#f44336;}
+    .btn-primary {background:#2196F3;}
+    .btn-sm {padding:4px 8px;font-size:12px;border-radius:4px;margin-left:6px;}
+    .post-card {padding:18px;background:rgba(255,255,255,0.1);border-radius:8px;margin:15px 0;border-left:4px solid #4CAF50;}
+    .post-card h3 {margin:0 0 8px;font-size:18px;}
+    .post-info {font-size:13px;opacity:0.8;margin-bottom:10px;}
+    .post-content {line-height:1.7;margin:10px 0;}
+    .post-op {display:flex;gap:10px;margin-top:12px;}
+    .like-count {color:#ffeb3b;font-weight:bold;}
+    .comment-area {margin-top:15px;padding-top:15px;border-top:1px dashed rgba(255,255,255,0.2);}
+    .comment-list {margin-top:10px;max-height:180px;overflow-y:auto;}
+    .comment-item {font-size:13px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:flex-start;}
+    .comment-left {flex:1;}
+    .comment-name {color:#4CAF50;font-weight:bold;}
+    .comment-time {opacity:0.7;font-size:11px;margin-left:8px;}
+    .tips {text-align:center;opacity:0.7;font-size:13px;margin-top:20px;}
+  </style>
+  <script src="safe.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>📢 主控频道（发布后全站用户即时可见）</h2>
+    
+    <!-- 主控发布区域 -->
+    <div class="publish-area">
+      <h3>发布全站通知</h3>
+      <input type="text" id="postTitle" placeholder="输入频道标题（必填）" class="input">
+      <textarea id="postContent" placeholder="输入发布内容（必填），全站用户均可查看、点赞、评论" class="textarea"></textarea>
+      <button class="btn btn-success" onclick="publishChannel()">立即发布（全站推送）</button>
+      <button class="btn btn-primary" onclick="clearPublish()">清空内容</button>
+    </div>
+
+    <!-- 已发布内容管理 -->
+    <h3>已发布内容（可删除+删评论）</h3>
+    <button class="btn btn-primary" onclick="refreshChannelPosts()">刷新所有内容</button>
+    <div id="channelList"></div>
+
+    <p class="tips">✅ 发布后自动推送给游客/普通用户，同步发提醒邮件 | ❗ 删帖/删评论后全站同步失效 | ✨ 全员可评论，主控独享删评权限</p>
+    <button class="btn btn-primary" onclick="window.location.href='master_index.html'">返回主控总后台</button>
+  </div>
+
+  <script>
+    // 主控权限校验
+    window.onload = function(){
+      if(localStorage.getItem("isMaster") !== "true"){
+        alert("❌ 仅主控可发布内容！");
+        window.location.href = "admin.html";
+      }
+    }
+
+    // 主控发布频道内容
+    function publishChannel() {
+      const title = document.getElementById('postTitle').value.trim();
+      const content = document.getElementById('postContent').value.trim();
+      if(!title || !content) {alert("标题和内容不能为空！");return;}
+      const post = publishChannelPost(title, content);
+      alert(`发布成功！内容ID：${post.id}，全站用户已可见`);
+      clearPublish();
+      refreshChannelPosts();
+    }
+
+    // 清空发布框
+    function clearPublish() {
+      document.getElementById('postTitle').value = "";
+      document.getElementById('postContent').value = "";
+    }
+
+    // 主控删除频道内容
+    function deleteChannelPost(postId) {
+      if(!confirm("确认删除？删除后全站用户将无法查看！")) return;
+      channelPosts = channelPosts.filter(post => post.id !== postId);
+      // 删帖同时删对应所有评论
+      commentRecords = commentRecords.filter(c=>c.postId!==postId);
+      alert("删除成功，全站同步更新（含对应评论）");
+      refreshChannelPosts();
+      sendMasterEmail("🗑️ 频道内容删除",`内容ID：${postId}\n删除时间：${new Date().toLocaleString()}\n连带删除对应所有评论`);
+    }
+
+    // 主控删除评论（专属权限）
+    function doDelComment(commentId){
+      if(!confirm("确认删除该评论？删除后全站同步消失！")) return;
+      const res = deleteComment(commentId);
+      alert(res);
+      refreshChannelPosts();
+    }
+
+    // 主控发评论
+    function doMasterComment(postId){
+      const content = prompt("请输入主控评论（全站可见）");
+      const res = publishComment(postId, "master", "master", content);
+      alert(res);
+      refreshChannelPosts();
+    }
+
+    // 刷新已发布内容（主控专属，带删帖+删评论）
+    function refreshChannelPosts() {
+      const list = document.getElementById('channelList');
+      if(channelPosts.length === 0){
+        list.innerHTML = "<p style='text-align:center;opacity:0.7;'>暂无已发布内容</p>";
+        return;
+      }
+      let html = "";
+      channelPosts.forEach(post => {
+        const comments = getCommentsByPostId(post.id);
+        let commentHtml = "<div style='opacity:0.7;font-size:13px;'>暂无评论</div>";
+        if(comments.length>0){
+          commentHtml = comments.map(c=>`
+            <div class="comment-item">
+              <div class="comment-left">
+                <span class="comment-name">${c.userRole==="master"?"【主控】":c.userRole==="normal"?"普通用户":"游客"}</span>
+                <span class="comment-time">${c.time}</span>
+                <div>${c.content}</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="doDelComment('${c.id}')">删</button>
+            </div>
+          `).join("");
+        }
+
+        html += `
+        <div class="post-card">
+          <h3>${post.title}</h3>
+          <div class="post-info">发布时间：${post.time} | 全站点赞数：<span class="like-count">${post.likes}</span></div>
+          <div class="post-content">${post.content}</div>
+          <div class="post-op">
+            <button class="btn btn-danger" onclick="deleteChannelPost('${post.id}')">删除该内容</button>
+            <button class="btn btn-primary" onclick="likeChannelPost('${post.id}', 'master')">主控点赞</button>
+            <button class="btn btn-success" onclick="doMasterComment('${post.id}')">主控评论</button>
+          </div>
+          
+          <div class="comment-area">
+            <div>💬 全站评论区（主控可删除任意评论）</div>
+            <div class="comment-list">${commentHtml}</div>
+          </div>
+        </div>`;
+      });
+      list.innerHTML = html;
+    }
+
+    // 页面加载初始化
+    window.onload = function() {
+      if(localStorage.getItem("isMaster") !== "true"){
+        alert("❌ 仅主控可访问！");
+        window.location.href = "admin.html";
+        return;
+      }
+      refreshChannelPosts();
+      // 10秒实时同步
+      setInterval(refreshChannelPosts, 10000);
+    }
+  </script>
+</body>
+</html>

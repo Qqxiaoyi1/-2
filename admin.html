@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>三级登录入口</title>
+  <style>
+    body {margin:0;padding:20px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);min-height:100vh;font-family:Arial,sans-serif;color:#fff;}
+    .container {max-width:400px;margin:50px auto;padding:30px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);}
+    input {width:100%;padding:12px;margin:10px 0;border:none;border-radius:6px;background:rgba(255,255,255,0.2);color:#fff;box-sizing:border-box;}
+    button {width:100%;padding:12px;border:none;border-radius:6px;color:#fff;font-size:16px;cursor:pointer;margin-top:10px;}
+    .lang-btn {width:48%;display:inline-block;margin:5px 1%;background:#2196F3;}
+    .other-btn {background:#ff9800;}
+    .channel-btn {background:#2196F3;}
+    .robot-chat-btn {background:#f97316;}
+    ::placeholder {color:rgba(255,255,255,0.7);}
+    .tips {text-align:center;margin-top:15px;font-size:14px;opacity:0.8;}
+  </style>
+  <script src="safe.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2 style="text-align:center;">三级登录入口</h2>
+    <input type="text" id="user" placeholder="账号（xiaoyi）- 主控专用">
+    <input type="password" id="pwd" placeholder="密码（qtxiaoyi）- 主控专用">
+    <input type="text" id="code" placeholder="验证码（942694）- 主控专用">
+    <!-- 多语言切换 -->
+    <button class="lang-btn" onclick="switchLang('zh')">中文</button>
+    <button class="lang-btn" onclick="switchLang('en')">English</button>
+    <!-- 三级登录核心 -->
+    <button class="other-btn" onclick="guestLogin()">游客登录（浏览+评论）</button>
+    <button class="other-btn" onclick="normalLogin()">普通登录（浏览+点赞+评论）</button>
+    <button onclick="login()">主控登录（最高权限）</button>
+    <!-- 快捷功能入口 -->
+    <button onclick="startAllRobot()">启动所有机器人</button>
+    <button onclick="checkServerStatus()">检测服务器状态</button>
+    <button class="channel-btn" onclick="goToMasterChannel()">直达主控频道</button>
+    <button class="robot-chat-btn" onclick="goRobotChat()">主控专属→机器人群聊</button>
+    <div class="tips" id="langTips">三级权限分离，主控独享最高管控权</div>
+  </div>
+
+  <script>
+    // 主控登录（唯一验证）
+    function login() {
+      const user = document.getElementById('user').value;
+      const pwd = document.getElementById('pwd').value;
+      const code = document.getElementById('code').value;
+      if (user === 'xiaoyi' && pwd === 'qtxiaoyi' && code === '942694') {
+        localStorage.setItem("isMaster", "true"); // 主控标识，关键！
+        window.location.href = 'master_index.html';
+      } else {
+        alert('账号/密码/验证码错误');
+      }
+    }
+    // 游客登录
+    function guestLogin() { window.location.href = 'guest_index.html'; }
+    // 普通用户登录
+    function normalLogin() {
+      const user = prompt("请输入普通用户名（任意填）"); 
+      const pwd = prompt("请输入普通用户密码（任意填）");
+      if(user && pwd) { 
+        alert("普通用户登录成功！可浏览、点赞、评论");
+        window.location.href = 'normal_index.html'; 
+      }
+    }
+    // 直达主控频道
+    function goToMasterChannel() {
+      if(confirm("非主控身份仅可浏览频道，是否前往？")){
+        window.location.href = 'master_channel.html';
+      }
+    }
+    // 主控专属机器人群聊入口（拦截非主控）
+    function goRobotChat() {
+      const user = document.getElementById('user').value;
+      const pwd = document.getElementById('pwd').value;
+      if(user === 'xiaoyi' && pwd === 'qtxiaoyi'){ // 仅主控可进
+        localStorage.setItem("isMaster", "true");
+        window.location.href = 'robot_group_chat.html';
+      }else{
+        alert("❌ 仅主控可进入机器人群聊！");
+      }
+    }
+    // 启动所有机器人
+    function startAllRobot(){
+      for(let robot in robots){
+        robots[robot].status = "在线";
+        robotDoAction("状态上报",{robotId:robot,needReport:true});
+      }
+      alert("✅ 所有8个机器人已启动，最高权限已开启");
+    }
+    // 检测服务器状态
+    function checkServerStatus(){
+      robotDoAction("服务器监控",{robotId:"服务器监控机器人",needReport:true});
+      alert(`服务器当前状态：${serverStatus}`);
+    }
+    // 语言切换同步
+    window.addEventListener('langChange',(e)=>{
+      document.getElementById('langTips').innerText = e.detail==='zh'?"三级权限分离，主控独享最高管控权":"Three-level authority separation, master has exclusive highest control";
+      document.title = e.detail==='zh'?"三级登录入口":"Three-level Login";
+    });
+  </script>
+</body>
+</html>

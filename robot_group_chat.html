@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>主控专属 - 机器人群聊中心</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body {
+      margin:0;padding:16px;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height:100vh;
+      font-family:Arial,sans-serif;
+      color:#fff;
+      overflow-x:hidden;
+    }
+    .container {
+      max-width:1100px;
+      margin:20px auto;
+      display:flex;
+      gap:16px;
+      padding:8px;
+    }
+    /* 机器人列表面板 */
+    .robot-list {
+      flex:1;
+      background:rgba(255,255,255,0.08);
+      border-radius:16px;
+      padding:20px;
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.15);
+      box-shadow:0 8px 32px rgba(0,0,0,0.1);
+    }
+    .robot-list h2 {
+      text-align:center;
+      margin-bottom:20px;
+      font-size:18px;
+      font-weight:600;
+      color:#e0e7ff;
+    }
+    .robot-item {
+      padding:14px 12px;
+      margin:10px 0;
+      border-radius:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1);
+      transition:all 0.2s;
+    }
+    .robot-item:hover {transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+    .online {border-left:4px solid #34d399;background:rgba(52,211,153,0.1);}
+    .online .status {color:#34d399;font-size:12px;}
+    .offline {border-left:4px solid #f87171;background:rgba(248,113,113,0.1);}
+    .offline .status {color:#f87171;font-size:12px;}
+    .robot-info {display:flex;flex-direction:column;gap:4px;}
+    .robot-id {font-size:12px;opacity:0.7;}
+    .robot-name {font-weight:500;}
+    .btn-sm {
+      padding:5px 10px;border:none;border-radius:8px;margin:0 3px;
+      cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s;
+    }
+    .start {background:#34d399;color:#065f46;}
+    .start:hover {background:#2dd4a1;}
+    .stop {background:#f87171;color:#991b1b;}
+    .stop:hover {background:#fca5a5;}
+    /* 群聊面板 */
+    .chat-area {
+      flex:3;
+      background:rgba(255,255,255,0.08);
+      border-radius:16px;
+      padding:24px;
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.15);
+      box-shadow:0 8px 32px rgba(0,0,0,0.1);
+    }
+    .chat-header {
+      display:flex;justify-content:space-between;align-items:center;
+      padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:20px;
+    }
+    .chat-header h2 {font-size:20px;font-weight:600;color:#e0e7ff;}
+    .chat-content {
+      height:480px;overflow-y:auto;padding:16px;background:rgba(0,0,0,0.1);
+      border-radius:12px;margin:10px 0;scrollbar-width:thin;
+    }
+    .chat-content::-webkit-scrollbar {width:6px;}
+    .chat-content::-webkit-scrollbar-thumb {background:rgba(255,255,255,0.2);border-radius:3px;}
+    /* 消息气泡 */
+    .chat-msg {
+      margin:12px 0;padding:12px 16px;border-radius:14px;max-width:75%;
+      line-height:1.5;position:relative;
+    }
+    .robot-msg {
+      background:rgba(59,130,246,0.25);border:1px solid rgba(59,130,246,0.3);
+      text-align:left;margin-right:auto;border-bottom-left-radius:4px;
+    }
+    .master-msg {
+      background:rgba(52,211,153,0.25);border:1px solid rgba(52,211,153,0.3);
+      text-align:right;margin-left:auto;border-bottom-right-radius:4px;
+    }
+    .msg-sender {font-weight:600;font-size:14px;}
+    .msg-time {font-size:11px;opacity:0.6;margin-top:4px;display:block;}
+    .msg-content {margin-top:6px;font-size:15px;}
+    /* 输入区 */
+    .input-area {display:flex;gap:12px;margin-top:20px;}
+    #chatInput {
+      flex:1;padding:14px 16px;border:none;border-radius:12px;
+      background:rgba(255,255,255,0.1);color:#fff;font-size:15px;
+      border:1px solid rgba(255,255,255,0.1);outline:none;transition:all 0.2s;
+    }
+    #chatInput:focus {border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);}
+    #chatInput::placeholder {color:rgba(255,255,255,0.5);}
+    .btn {
+      padding:14px 24px;border:none;border-radius:12px;cursor:pointer;color:#fff;
+      font-size:15px;font-weight:500;transition:all 0.2s;border:1px solid transparent;
+    }
+    .btn-all {
+      background:rgba(249,115,22,0.2);border-color:rgba(249,115,22,0.3);
+      color:#fcd34d;width:100%;margin:6px 0;
+    }
+    .btn-all:hover {background:rgba(249,115,22,0.3);}
+    .btn-send {
+      background:rgba(59,130,246,0.3);border-color:rgba(59,130,246,0.4);
+      color:#bfdbfe;min-width:100px;
+    }
+    .btn-send:hover {background:rgba(59,130,246,0.4);}
+    .btn-clear {
+      background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.3);
+      color:#fca5a5;
+    }
+    .btn-clear:hover {background:rgba(239,68,68,0.3);}
+    /* 手机适配 */
+    @media (max-width:768px) {.container{flex-direction:column;}.chat-content{height:350px;}}
+  </style>
+  <!-- 必须按这个顺序引用，不然会空白！ -->
+  <script src="safe.js"></script>
+  <script src="robot_chat.js"></script>
+</head>
+<body>
+  <!-- 主控权限校验，非主控跳转登录 -->
+  <script>
+    function checkMasterAuth() {
+      const isMaster = localStorage.getItem("isMaster") === "true";
+      if (!isMaster) {
+        alert("❌ 仅主控可见！请先登录主控账号");
+        window.location.href = "admin.html";
+        return false;
+      }
+      return true;
+    }
+    // 页面加载先校验，通过再渲染内容，避免空白
+    window.onload = function() {
+      if(checkMasterAuth()){
+        refreshRobotList();
+        refreshGroupChat();
+        localStorage.setItem("isMaster", "true");
+      }
+    }
+  </script>
+
+  <div class="container">
+    <!-- 8大机器人列表 -->
+    <div class="robot-list">
+      <h2>🤖 8大机器人管控</h2>
+      <button class="btn btn-all" onclick="startAllRobots()">🚀 启动全部机器人</button>
+      <button class="btn btn-all" onclick="stopAllRobots()">🛑 停止全部机器人</button>
+      <div id="robotList"></div>
+    </div>
+
+    <!-- 群聊区域（不会空白，无消息也有提示） -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <h2>主控专属机器人群聊（仅主控可见）</h2>
+        <button class="btn btn-clear" onclick="clearChatRecords()">清空记录</button>
+      </div>
+      <div class="chat-content" id="chatContent"></div>
+      <div class="input-area">
+        <input type="text" id="chatInput" placeholder="输入指令，在线机器人自动应答 📩">
+        <button class="btn btn-send" onclick="sendMasterChat()">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 启停全部机器人（确保有消息输出，不空白）
+    function startAllRobots() {
+      robotGroup.forEach(robot => robot.status = "在线");
+      sendGroupChat("master", "主控", "🚀 启动全部机器人，各司其职，严守岗位！");
+      refreshRobotList();
+      refreshGroupChat();
+      alert("✅ 8大机器人全部启动就绪");
+    }
+    function stopAllRobots() {
+      robotGroup.forEach(robot => robot.status = "离线");
+      sendGroupChat("master", "主控", "🛑 全部机器人停止运行，原地待命！");
+      refreshRobotList();
+      refreshGroupChat();
+      alert("❌ 8大机器人已停止待命");
+    }
+
+    // 主控发消息（必出内容，杜绝空白）
+    function sendMasterChat() {
+      const content = document.getElementById("chatInput").value.trim();
+      if (!content) {alert("指令不能为空！");return;}
+      sendGroupChat("master", "主控", content);
+      robotAutoReply({senderType:"master", content:content});
+      document.getElementById("chatInput").value = "";
+      refreshGroupChat();
+    }
+
+    // 清空记录
+    function clearChatRecords() {
+      if(confirm("⚠️ 确认清空群聊记录？清空后不可恢复")){
+        groupChatRecords = [];
+        refreshGroupChat();
+      }
+    }
+  </script>
+</body>
+</html>

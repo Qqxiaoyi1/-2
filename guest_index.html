@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游客浏览页 - 主控频道</title>
+  <style>
+    body {margin:0;padding:20px;background:linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);font-family:Arial,sans-serif;color:#333;}
+    .container {max-width:800px;margin:30px auto;padding:25px;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+    h2 {color:#2196F3;border-bottom:2px solid #eee;padding-bottom:10px;margin-bottom:20px;text-align:center;}
+    .post-card {padding:15px;border:1px solid #eee;border-radius:8px;margin:15px 0;}
+    .post-card h3 {color:#333;margin:0 0 8px;}
+    .post-info {font-size:12px;color:#999;margin-bottom:10px;}
+    .post-content {line-height:1.6;color:#666;margin:10px 0;}
+    .like-area {color:#f44336;font-weight:bold;}
+    .comment-area {margin-top:15px;padding-top:15px;border-top:1px dashed #eee;}
+    .comment-input {width:100%;padding:8px;border:1px solid #eee;border-radius:4px;margin:8px 0;resize:none;height:60px;}
+    .comment-btn {padding:6px 12px;border:none;border-radius:4px;background:#2196F3;color:#fff;cursor:pointer;}
+    .comment-list {margin-top:10px;max-height:150px;overflow-y:auto;}
+    .comment-item {font-size:13px;padding:6px 0;border-bottom:1px solid #f5f5f5;}
+    .comment-name {color:#2196F3;font-weight:bold;}
+    .comment-time {color:#999;font-size:11px;margin-left:8px;}
+    .btn {padding:10px 20px;border:none;border-radius:6px;background:#2196F3;color:#fff;cursor:pointer;margin:10px 0;}
+    .tips {color:#999;font-size:13px;text-align:center;margin-top:20px;}
+  </style>
+  <script src="safe.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>📢 主控频道（全站公开）</h2>
+    <button class="btn" onclick="refreshChannelPosts()">刷新频道内容</button>
+    <div id="channelList"></div>
+    <p class="tips">游客身份可浏览+评论，不可点赞 | 主控发布内容全站可见</p>
+    <button class="btn" onclick="window.location.href='admin.html'">返回登录页</button>
+  </div>
+
+  <script>
+    // 游客唯一标识
+    const guestId = "guest_" + Math.random().toString(36).substr(2, 8);
+
+    // 游客发布评论
+    function doGuestComment(postId){
+      const content = prompt("请输入你的评论");
+      const res = publishComment(postId, guestId, "guest", content);
+      alert(res);
+      refreshChannelPosts();
+    }
+
+    // 游客仅浏览+评论，无点赞权限
+    function refreshChannelPosts() {
+      const list = document.getElementById('channelList');
+      if(channelPosts.length === 0){
+        list.innerHTML = "<p style='text-align:center;color:#999;'>暂无主控发布内容</p>";
+        return;
+      }
+      let html = "";
+      channelPosts.forEach(post => {
+        const comments = getCommentsByPostId(post.id);
+        let commentHtml = "<div class='comment-item'>暂无评论，快来抢沙发~</div>";
+        if(comments.length>0){
+          commentHtml = comments.map(c=>`
+            <div class="comment-item">
+              <span class="comment-name">游客</span>
+              <span class="comment-time">${c.time}</span>
+              <div>${c.content}</div>
+            </div>
+          `).join("");
+        }
+
+        html += `
+        <div class="post-card">
+          <h3>${post.title}</h3>
+          <div class="post-info">发布人：${post.author} | 发布时间：${post.time}</div>
+          <div class="post-content">${post.content}</div>
+          <div class="like-area">❤️ 点赞数：${post.likes}（游客不可点赞）</div>
+          
+          <div class="comment-area">
+            <div>💬 评论区</div>
+            <textarea class="comment-input" id="cmt_${post.id}" placeholder="游客可评论，输入后点击发送"></textarea>
+            <button class="comment-btn" onclick="doGuestComment('${post.id}')">发送评论</button>
+            <div class="comment-list">${commentHtml}</div>
+          </div>
+        </div>`;
+      });
+      list.innerHTML = html;
+    }
+    // 页面加载自动刷新
+    window.onload = refreshChannelPosts;
+    // 30秒自动刷新
+    setInterval(refreshChannelPosts,30000);
+  </script>
+</body>
+</html>

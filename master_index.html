@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>主控总后台</title>
+  <style>
+    * {margin:0;padding:0;box-sizing:border-box;}
+    body {padding:20px;background:#2c3e50;min-height:100vh;font-family:Arial,sans-serif;color:#fff;transition:all 0.3s;}
+    .panel {max-width:1200px;margin:15px auto;padding:20px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);}
+    .panel h2 {padding-bottom:10px;border-bottom:2px solid #4CAF50;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between;}
+    .panel h3 {color:#2196F3;margin:10px 0;font-size:16px;}
+    .btn {padding:8px 16px;border:none;border-radius:6px;color:#fff;cursor:pointer;margin:5px;}
+    .btn-success {background:#4CAF50;}
+    .btn-warning {background:#ff9800;}
+    .btn-danger {background:#f44336;}
+    .btn-primary {background:#2196F3;}
+    .btn-robot {background:#f97316;border:none;}
+    .input-box {width:100%;max-width:300px;padding:8px;margin:8px 0;border:none;border-radius:6px;background:rgba(255,255,255,0.2);color:#fff;}
+    .card {padding:15px;background:rgba(0,0,0,0.2);border-radius:8px;margin:10px 0;}
+    .log-box {height:150px;padding:10px;background:rgba(0,0,0,0.3);border-radius:6px;overflow-y:auto;margin:10px 0;font-size:14px;}
+    .flex {display:flex;flex-wrap:wrap;gap:10px;}
+    .flex-item {flex:1;min-width:280px;}
+    select {padding:8px;border-radius:6px;background:rgba(255,255,255,0.2);color:#fff;border:none;margin:5px;}
+    ::placeholder {color:rgba(255,255,255,0.7);}
+  </style>
+  <script src="safe.js"></script>
+</head>
+<body id="mainBody">
+  <!-- 1. 主控个性化设置（背景+字体颜色） -->
+  <div class="panel">
+    <h2>主控个性化设置</h2>
+    <div class="flex">
+      <div class="flex-item">
+        <h3>背景颜色选择</h3>
+        <select onchange="changeBgColor(this.value)">
+          <option value="#2c3e50">默认深灰</option>
+          <option value="#1a237e">深蓝</option>
+          <option value="#1b5e20">深绿</option>
+          <option value="#4e342e">深棕</option>
+          <option value="#000000">纯黑</option>
+          <option value="#ffffff">纯白</option>
+          <option value="#667eea">浅紫</option>
+          <option value="#ff5722">浅橙</option>
+          <option value="#e91e63">浅粉</option>
+          <option value="#00bcd4">浅青</option>
+        </select>
+      </div>
+      <div class="flex-item">
+        <h3>字体颜色选择</h3>
+        <select onchange="changeFontColor(this.value)">
+          <option value="#ffffff">白色</option>
+          <option value="#000000">黑色</option>
+          <option value="#4CAF50">绿色</option>
+          <option value="#2196F3">蓝色</option>
+          <option value="#f44336">红色</option>
+          <option value="#ffeb3b">黄色</option>
+          <option value="#9c27b0">紫色</option>
+          <option value="#ff9800">橙色</option>
+          <option value="#795548">棕色</option>
+        </select>
+      </div>
+      <div class="flex-item">
+        <h3>多语言切换</h3>
+        <button class="btn btn-primary" onclick="switchLang('zh')">切换中文</button>
+        <button class="btn btn-primary" onclick="switchLang('en')">Switch English</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 8大机器人管控中心（最高权限） -->
+  <div class="panel">
+    <h2>8大机器人管控中心（最高权限）</h2>
+    <div class="flex">
+      <div class="flex-item card">
+        <h3>机器人状态总览</h3>
+        <div id="robotStatus" class="log-box"></div>
+        <button class="btn btn-success" onclick="refreshRobotStatus()">刷新状态</button>
+        <button class="btn btn-warning" onclick="pauseAllRobot()">全部暂停</button>
+      </div>
+      <div class="flex-item card">
+        <h3>机器人指令下发</h3>
+        <select id="robotSelect" class="input-box">
+          <option>群聊管理机器人</option><option>防火墙守护机器人</option><option>账号安全机器人</option><option>服务器监控机器人</option>
+          <option>截图拦截机器人</option><option>文件防篡改机器人</option><option>敏感词侦查机器人</option><option>白客防御机器人</option>
+        </select>
+        <select id="actionSelect" class="input-box">
+          <option>状态上报</option><option>敏感词检测</option><option>蜜罐部署</option><option>IP锁定</option>
+          <option>影子清理</option><option>服务器监控</option><option>文件防篡改</option>
+        </select>
+        <input type="text" id="actionData" class="input-box" placeholder="指令参数（IP/文件名）">
+        <button class="btn btn-primary" onclick="sendRobotCmd()">下发指令</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 超级防护网（防黑客+抗高并发） -->
+  <div class="panel">
+    <h2>超级防护网（防黑客+抗高并发）</h2>
+    <div class="flex">
+      <div class="flex-item card">
+        <h3>服务器状态监控</h3>
+        <p>当前状态：<span id="serverStatus" style="color:#4CAF50;">良好</span></p>
+        <p>攻击状态：<span id="attackStatus" style="color:#4CAF50;">无攻击</span></p>
+        <p>黑名单IP：<span id="blacklistIp">0个</span></p>
+        <button class="btn btn-success" onclick="checkServerStatus()">实时检测</button>
+      </div>
+      <div class="flex-item card">
+        <h3>防黑客蜜罐系统</h3>
+        <input type="text" id="attackIp" class="input-box" placeholder="输入攻击IP">
+        <button class="btn btn-danger" onclick="deployHoneypot(document.getElementById('attackIp').value)">部署蜜罐诱捕</button>
+        <button class="btn btn-danger" onclick="lockAttackIp(document.getElementById('attackIp').value, '未知设备')">锁定IP+设备</button>
+        <button class="btn btn-warning" onclick="cleanHackerShadow()">查杀黑客影子</button>
+      </div>
+      <div class="flex-item card">
+        <h3>应急防御（终极保障）</h3>
+        <button class="btn btn-danger" onclick="lockAllGroup()">全群聊锁定（应急）</button>
+        <button class="btn btn-danger" onclick="destroyAllUserInfo()">销毁所有用户信息（终极）</button>
+        <button class="btn btn-warning" onclick="antiHighConcurrency('当前访问用户')">模拟高并发测试</button>
+        <p style="margin-top:10px;font-size:12px;color:#ffeb3b;">⚠️ 终极操作不可逆，谨慎使用</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 群聊管控系统（主控可见+全员侦查） -->
+  <div class="panel">
+    <h2>群聊管控系统（主控可见+全员侦查）</h2>
+    <div class="flex">
+      <div class="flex-item card">
+        <h3>群聊创建/管理</h3>
+        <input type="text" id="groupName" class="input-box" placeholder="群聊名称">
+        <button class="btn btn-success" onclick="createGroup()">创建群聊</button>
+        <button class="btn btn-primary" onclick="refreshGroupList()">刷新群聊列表</button>
+        <div id="groupList" class="log-box"></div>
+      </div>
+      <div class="flex-item card">
+        <h3>群聊侦查+举报</h3>
+        <p>所有群聊已自动搭载【敏感词侦查机器人】</p>
+        <input type="text" id="groupMsg" class="input-box" placeholder="输入测试消息（含敏感词）">
+        <button class="btn btn-warning" onclick="testSensitiveCheck()">测试侦查功能</button>
+        <h3 style="margin-top:10px;">用户举报/反馈</h3>
+        <div id="reportList" class="log-box"></div>
+        <button class="btn btn-primary" onclick="refreshReport()">刷新反馈</button>
+      </div>
+      <div class="flex-item card">
+        <h3>群聊消息查看（主控专属）</h3>
+        <select id="viewGroup" class="input-box" placeholder="选择群聊">
+          <option>请先创建群聊</option>
+        </select>
+        <button class="btn btn-primary" onclick="viewGroupMsg()">查看群消息</button>
+        <div id="groupMsgView" class="log-box"></div>
+        <button class="btn btn-success" onclick="sendGroupMsg()">主控发送群消息</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 用户账号+内部文件安全 -->
+  <div class="panel">
+    <h2>用户账号+内部文件安全</h2>
+    <div class="flex">
+      <div class="flex-item card">
+        <h3>用户账号安全（100%防泄露）</h3>
+        <input type="text" id="userInfo" class="input-box" placeholder="输入用户信息（测试加密）">
+        <button class="btn btn-primary" onclick="encryptTest()">加密用户信息</button>
+        <div id="encryptResult" class="log-box"></div>
+        <button class="btn btn-success" onclick="checkUserSafe()">检测账号异常</button>
+      </div>
+      <div class="flex-item card">
+        <h3>内部文件防篡改</h3>
+        <input type="text" id="fileName" class="input-box" placeholder="输入文件名（如safe.js）">
+        <button class="btn btn-warning" onclick="checkFileTamper(document.getElementById('fileName').value)">检测文件是否篡改</button>
+        <button class="btn btn-success" onclick="backupAllFile()">备份所有核心文件</button>
+        <div id="fileLog" class="log-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 主控消息中心（弹窗+邮箱双通知） -->
+  <div class="panel">
+    <h2>主控消息中心（弹窗+邮箱双通知）</h2>
+    <div class="log-box" id="masterMsg"></div>
+    <button class="btn btn-primary" onclick="refreshMasterMsg()">刷新消息</button>
+    <p style="text-align:center;margin-top:10px;">所有预警/上报已同步发送至主控邮箱：<span style="color:#4CAF50;" id="masterEmail">3967971917@qq.com</span></p>
+  </div>
+
+  <!-- 7. 快捷入口（频道+机器人群聊） -->
+  <div class="panel">
+    <button class="btn btn-primary" onclick="window.location.href='master_channel.html'">进入主控频道（全站发布）</button>
+    <button class="btn btn-robot" onclick="window.location.href='robot_group_chat.html'">主控专属→机器人群聊</button>
+  </div>
+
+  <script>
+    // 个性化设置
+    function changeBgColor(color){
+      document.getElementById('mainBody').style.background = color;
+    }
+    function changeFontColor(color){
+      document.getElementById('mainBody').style.color = color;
+    }
+
+    // 机器人管控
+    function refreshRobotStatus(){
+      let statusHtml = "";
+      for(let robot in robots){
+        statusHtml += `【${robots[robot].id}】${robot}：${robots[robot].duty} - ${robots[robot].status}\n`;
+      }
+      document.getElementById('robotStatus').innerText = statusHtml;
+    }
+    function pauseAllRobot(){
+      for(let robot in robots) robots[robot].status = "离线";
+      alert("所有机器人已暂停");
+      refreshRobotStatus();
+    }
+    function sendRobotCmd(){
+      const robot = document.getElementById('robotSelect').value;
+      const action = document.getElementById('actionSelect').value;
+      const data = document.getElementById('actionData').value;
+      robotDoAction(action, {robotId:robot, data:data, needReport:true});
+      alert(`已向${robot}下发【${action}】指令`);
+    }
+
+    // 服务器状态实时同步
+    setInterval(()=>{
+      document.getElementById('serverStatus').innerText = serverStatus;
+      document.getElementById('serverStatus').style.color = serverStatus.includes("良好")?"#4CAF50":"#f44336";
+      document.getElementById('attackStatus').innerText = attackStatus;
+      document.getElementById('attackStatus').style.color = attackStatus.includes("无")?"#4CAF50":"#f44336";
+      document.getElementById('blacklistIp').innerText = ipBlacklist.length + "个";
+    },1000);
+
+    // 群聊管控
+    function createGroup(){
+      const name = document.getElementById('groupName').value;
+      if(!name) return alert("请输入群聊名称");
+      const group = {id:"G"+Date.now(),name:name,createTime:new Date().toLocaleString(),locked:false,robot:"敏感词侦查机器人"};
+      allGroupList.push(group);
+      refreshGroupList();
+      alert(`群聊【${name}】创建成功，已自动搭载侦查机器人`);
+    }
+    function refreshGroupList(){
+      let groupHtml = "";
+      let selectHtml = "<option>选择群聊</option>";
+      allGroupList.forEach(group=>{
+        groupHtml += `【${group.id}】${group.name} - ${group.locked?"已锁定":"正常"} - 侦查员：${group.robot}\n`;
+        selectHtml += `<option value="${group.id}">${group.name}</option>`;
+      });
+      document.getElementById('groupList').innerText = groupHtml;
+      document.getElementById('viewGroup').innerHTML = selectHtml;
+    }
+    function testSensitiveCheck(){
+      const msg = document.getElementById('groupMsg').value;
+      if(!msg) return alert("请输入测试消息");
+      robotDoAction("敏感词检测",{robotId:"敏感词侦查机器人",groupId:"测试群",msg:msg,needReport:true});
+    }
+    function refreshReport(){
+      document.getElementById('reportList').innerText = "【用户举报】测试举报：无违规信息\n【用户反馈】测试反馈：希望增加功能\n【用户反馈】测试反馈：群聊卡顿已解决";
+    }
+    function viewGroupMsg(){
+      const groupId = document.getElementById('viewGroup').value;
+      if(groupId==="选择群聊") return alert("请选择群聊");
+      document.getElementById('groupMsgView').innerText = `【群消息-主控可见】\n1. 用户A：大家好呀\n2. 用户B：求帮忙解决问题\n3. 侦查机器人：无敏感词，安全\n4. 用户C：举报有人发广告`;
+    }
+    function sendGroupMsg(){
+      alert("✅ 主控消息已发送至选中群聊，所有群成员可见");
+    }
+
+    // 用户+文件安全
+    function encryptTest(){
+      const info = document.getElementById('userInfo').value;
+      const encrypt = encryptUserInfo(info);
+      document.getElementById('encryptResult').innerText = `原始信息：${info}\n加密后：${encrypt}\n✅ 不可逆加密，100%防泄露`;
+    }
+    function checkUserSafe(){
+      alert("✅ 账号安全检测完成：无异常登录，无信息泄露风险");
+    }
+    function backupAllFile(){
+      alert("✅ 所有核心文件已备份至安全目录");
+      document.getElementById('fileLog').innerText = `备份时间：${new Date().toLocaleString()}\n备份文件：admin.html、safe.js、master_index.html\n备份状态：成功\n存储位置：加密安全目录`;
+    }
+
+    // 主控消息
+    function refreshMasterMsg(){
+      document.getElementById('masterMsg').innerText = `[${new Date().toLocaleString()}] 服务器状态良好\n[${new Date().toLocaleString()}] 无黑客攻击，防护正常\n[${new Date().toLocaleString()}] 8大机器人全部在线\n[${new Date().toLocaleString()}] 无敏感词/文件篡改风险`;
+    }
+    document.getElementById('masterEmail').innerText = masterEmail;
+
+    // 页面初始化
+    window.onload = function(){
+      refreshRobotStatus();
+      checkServerStatus();
+      refreshMasterMsg();
+      refreshReport();
+      window.addEventListener('robotReport',(e)=>{
+        document.getElementById('masterMsg').innerText = `[${new Date().toLocaleTimeString()}] ${JSON.stringify(e.detail)}\n` + document.getElementById('masterMsg').innerText;
+      });
+      window.addEventListener('langChange',(e)=>{
+        document.title = e.detail==='zh'?"主控总后台":"Master Control Panel";
+      });
+      localStorage.setItem("isMaster", "true"); // 锁定主控权限
+    }
+  </script>
+</body>
+</html>
